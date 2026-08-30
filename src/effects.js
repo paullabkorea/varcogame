@@ -161,7 +161,12 @@ export class Rings {
     this.items = [];
     this.pool = [];
   }
-  spawn(pos, { color = 0xff8844, radius = 4, life = 0.5, y = 0.06, tilt = -Math.PI / 2 } = {}) {
+  /**
+   * warn:true 면 밖에서 안으로 조여드는 **예고 고리**가 된다.
+   * 퍼져 나가는 충격파와 정반대로 움직여서, 이미 일어난 일(폭발)과
+   * 곧 일어날 일(강타)이 한눈에 구분된다.
+   */
+  spawn(pos, { color = 0xff8844, radius = 4, life = 0.5, y = 0.06, tilt = -Math.PI / 2, warn = false } = {}) {
     let m = this.pool.pop();
     if (!m) {
       m = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({
@@ -173,10 +178,10 @@ export class Rings {
     m.material.opacity = 1;
     m.position.set(pos.x, pos.y + y, pos.z);
     m.rotation.set(tilt, 0, 0);
-    m.scale.setScalar(0.3);
+    m.scale.setScalar(warn ? radius * 1.85 : 0.3);
     m.visible = true;
     this.scene.add(m);
-    this.items.push({ m, t: 0, life, radius });
+    this.items.push({ m, t: 0, life, radius, warn });
     return m;
   }
   update(dt) {
@@ -188,6 +193,12 @@ export class Rings {
         this.scene.remove(it.m);
         this.pool.push(it.m);
         this.items.splice(i, 1);
+        continue;
+      }
+      if (it.warn) {
+        // 밖 → 안으로 조여들며 점점 진해지고, 마지막 순간 깜빡인다
+        it.m.scale.setScalar(it.radius * (1.85 - 0.85 * k * k));
+        it.m.material.opacity = (0.35 + k * 0.6) * (k > 0.75 ? (Math.sin(it.t * 60) * 0.3 + 0.7) : 1);
         continue;
       }
       const e = 1 - Math.pow(1 - k, 3);
@@ -274,6 +285,87 @@ export class FloatingText {
       it.el.style.transform = 'translate(-50%,-50%) translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) scale(' + (1 + (1 - k) * 0.25).toFixed(2) + ')';
       it.el.style.opacity = tmpV1.z > 1 ? 0 : (1 - k * k);
     }
+  }
+}
+
+/**
+ * 몹 머리 위 체력바.
+ *
+ * 몹마다 메시를 달면 드로우콜이 몹 수만큼 늘어난다. 대신 인스턴스 지오메트리
+ * 하나에 전부 밀어 넣어 **드로우콜 1회**로 끝낸다. 빌보드는 뷰 공간에서
+ * 쿼드를 밀어 만들기 때문에 카메라가 어떻게 돌아도 항상 정면을 본다.
+ */
+const MAX_BARS = 200;
+
+export class HealthBars {
+  constructor(scene) {
+    const base = new THREE.PlaneGeometry(1, 1);
+    const g = new THREE.InstancedBufferGeometry();
+    g.index = base.index;
+    g.setAttribute('position', base.attributes.position);
+    g.setAttribute('uv', base.attributes.uv);
+
+    this.off = new Float32Array(MAX_BARS * 3);   // 월드 위치
+    this.col = new Float32Array(MAX_BARS * 3);   // 채움 색
+    this.dat = new Float32Array(MAX_BARS * 2);   // 채움 비율, 가로 폭
+    g.setAttribute('aOff', new THREE.InstancedBufferAttribute(this.off, 3));
+    g.setAttribute('aCol', new THREE.InstancedBufferAttribute(this.col, 3));
+    g.setAttribute('aDat', new THREE.InstancedBufferAttribute(this.dat, 2));
+    g.instanceCount = 0;
+    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
+
+    const mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, depthTest: false,
+      vertexShader: [
+        'attribute vec3 aOff; attribute vec3 aCol; attribute vec2 aDat;',
+        'varying vec2 vUv; varying vec3 vCol; varying float vRatio;',
+        'void main(){',
+        '  vUv = uv; vCol = aCol; vRatio = aDat.x;',
+        '  vec4 mv = modelViewMatrix * vec4(aOff, 1.0);',
+        '  mv.xy += position.xy * vec2(aDat.y, 0.13);',
+        '  gl_Position = projectionMatrix * mv;',
+        '}'
+      ].join('\n'),
+      fragmentShader: [
+        'varying vec2 vUv; varying vec3 vCol; varying float vRatio;',
+        'void main(){',
+        '  float frame = step(vUv.y, 0.17) + step(0.83, vUv.y)',
+        '              + step(vUv.x, 0.012) + step(0.988, vUv.x);',
+        '  if (frame > 0.5) { gl_FragColor = vec4(0.015, 0.01, 0.04, 0.85); return; }',
+        '  float fill = step(vUv.x, vRatio);',
+        '  vec3 c = mix(vec3(0.11, 0.07, 0.17), vCol, fill);',
+        '  gl_FragColor = vec4(c, mix(0.62, 0.96, fill));',
+        '}'
+      ].join('\n')
+    });
+
+    this.mesh = new THREE.Mesh(g, mat);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 8;
+    scene.add(this.mesh);
+    this.geo = g;
+    this.n = 0;
+    this._c = new THREE.Color();
+  }
+
+  begin() { this.n = 0; }
+
+  /** ratio 0~1, width 는 월드 단위 가로 폭 */
+  add(x, y, z, ratio, width, color) {
+    if (this.n >= MAX_BARS) return;
+    const i = this.n++, i3 = i * 3;
+    this.off[i3] = x; this.off[i3 + 1] = y; this.off[i3 + 2] = z;
+    const c = this._c.set(color);
+    this.col[i3] = c.r; this.col[i3 + 1] = c.g; this.col[i3 + 2] = c.b;
+    this.dat[i * 2] = clamp(ratio, 0, 1);
+    this.dat[i * 2 + 1] = width;
+  }
+
+  end() {
+    this.geo.instanceCount = this.n;
+    this.geo.attributes.aOff.needsUpdate = true;
+    this.geo.attributes.aCol.needsUpdate = true;
+    this.geo.attributes.aDat.needsUpdate = true;
   }
 }
 

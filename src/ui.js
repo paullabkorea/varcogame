@@ -13,7 +13,9 @@ export const UPGRADES = [
   { ic: '⚡', name: '폭풍의 사슬', desc: '연쇄 번개 대상 +2', apply: p => p.stats.chainExtra += 2 },
   { ic: '🩸', name: '피의 계약', desc: '가한 피해의 4%를 체력으로 흡수', apply: p => p.stats.lifesteal += 0.04 },
   { ic: '💥', name: '관통 탄', desc: '화염구가 적 1명을 더 관통', apply: p => p.stats.pierce += 1 },
-  { ic: '🌀', name: '공간 도약', desc: '점멸 대기시간 -30%', apply: p => p.stats.dashCd *= 0.7 }
+  { ic: '🌀', name: '공간 도약', desc: '점멸 대기시간 -30%', apply: p => p.stats.blinkCdr *= 0.7 },
+  { ic: '🎯', name: '급소 간파', desc: '치명타 확률 +9% (치명타는 2배 피해)', apply: p => p.stats.crit = Math.min(0.85, p.stats.crit + 0.09) },
+  { ic: '🔮', name: '마력 흡수', desc: '적 처치마다 마나 +5 회복', apply: p => p.stats.manaOnKill += 5 }
 ];
 
 export class UI {
@@ -42,11 +44,37 @@ export class UI {
       title: document.getElementById('title'),
       gameover: document.getElementById('gameover'),
       goStats: document.getElementById('goStats'),
+      pause: document.getElementById('pause'),
+      combo: document.getElementById('combo'),
+      comboNum: document.getElementById('comboNum'),
+      comboMul: document.getElementById('comboMul'),
+      runes: document.getElementById('runes'),
       loading: document.getElementById('loading'),
       loadFill: document.getElementById('loadFill'),
       loadText: document.getElementById('loadText')
     };
     this._buildSpellBar();
+    this.runes = new Map();
+  }
+
+  /* ---------------- 획득 룬 목록 ---------------- */
+  resetRunes() {
+    this.runes.clear();
+    this.el.runes.innerHTML = '';
+  }
+
+  addRune(u) {
+    const n = (this.runes.get(u.name) ?? 0) + 1;
+    this.runes.set(u.name, n);
+    this.el.runes.innerHTML = '';
+    for (const [name, count] of this.runes) {
+      const u2 = UPGRADES.find(x => x.name === name);
+      const d = document.createElement('div');
+      d.className = 'rune';
+      d.title = name + ' ×' + count + ' — ' + (u2 ? u2.desc : '');
+      d.innerHTML = (u2 ? u2.ic : '◈') + (count > 1 ? '<b>' + count + '</b>' : '');
+      this.el.runes.appendChild(d);
+    }
   }
 
   _buildSpellBar() {
@@ -107,11 +135,22 @@ export class UI {
       this.el.waveSub.textContent = '남은 적 ' + (game.enemies.length + wm.queue.length);
     }
 
+    // 연속 처치
+    if (game.combo >= 2) {
+      this.el.combo.classList.remove('hidden');
+      this.el.comboNum.textContent = game.combo;
+      this.el.comboMul.textContent = '×' + game.comboMul().toFixed(2);
+      // 남은 시간이 줄면 흐려진다 — 끊기기 직전인 걸 눈으로 안다
+      this.el.combo.style.opacity = (0.35 + Math.min(1, game.comboT / 1.2) * 0.65).toFixed(2);
+    } else {
+      this.el.combo.classList.add('hidden');
+    }
+
     // 보스 체력 바
     const boss = game.enemies.find(e => e.def.boss && e.alive);
     if (boss) {
       this.el.bossBar.classList.remove('hidden');
-      this.el.bossName.textContent = boss.def.name;
+      this.el.bossName.textContent = boss.name;
       this.el.bossFill.style.transform = 'scaleX(' + Math.max(0, boss.hp / boss.maxHp) + ')';
     } else {
       this.el.bossBar.classList.add('hidden');
@@ -137,11 +176,17 @@ export class UI {
       chosen.push(u);
     }
     this.el.cards.innerHTML = '';
+    let taken = false;      // 한 번 열릴 때 한 장만 — 더블클릭으로 두 번 먹지 않게
     chosen.forEach(u => {
       const c = document.createElement('div');
       c.className = 'card';
       c.innerHTML = '<div class="ic">' + u.ic + '</div><h3>' + u.name + '</h3><p>' + u.desc + '</p>';
-      c.onclick = () => { this.hide('levelup'); onPick(u); };
+      c.onclick = () => {
+        if (taken) return;
+        taken = true;
+        this.hide('levelup');
+        onPick(u);
+      };
       this.el.cards.appendChild(c);
     });
     this.show('levelup');
@@ -149,10 +194,18 @@ export class UI {
 
   showGameOver(game) {
     const t = Math.floor(game.elapsed);
+    // 최고 점수는 브라우저에만 남는다 (사생활 모드 등에서 던질 수 있어 감싼다)
+    let best = 0;
+    try { best = Number(localStorage.getItem('runeguard.best') || 0); } catch (e) { /* 무시 */ }
+    const rec = game.score > best;
+    if (rec) { try { localStorage.setItem('runeguard.best', String(game.score)); } catch (e) { /* 무시 */ } }
+
     this.el.goStats.innerHTML =
       '도달 웨이브 <b>' + Math.max(1, game.waves.wave) + '</b> · 최종 레벨 <b>' + game.player.level + '</b><br>' +
-      '처치 <b>' + game.kills + '</b> · 생존 <b>' + Math.floor(t / 60) + '분 ' + (t % 60) + '초</b><br>' +
-      '최종 점수 <b>' + game.score + '</b>';
+      '처치 <b>' + game.kills + '</b> · 최고 연속 <b>' + game.bestCombo + '</b> · 생존 <b>' +
+      Math.floor(t / 60) + '분 ' + (t % 60) + '초</b><br>' +
+      '최종 점수 <b>' + game.score + '</b>' +
+      (rec ? ' <em class="rec">신기록!</em>' : ' <span class="dimmed">(최고 ' + best + ')</span>');
     this.show('gameover');
   }
 }

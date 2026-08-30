@@ -4,14 +4,12 @@ import { ARENA_RADIUS } from './world.js';
 
 /** HUD와 입력에 쓰이는 마법 정의 */
 export const SPELLS = [
-  { id: 'fire',   name: '화염구',     key: 'LMB', glyph: '🔥', mana: 8,  cd: 0.40, color: '#ff9a4a' },
-  { id: 'frost',  name: '서리 폭발',  key: 'RMB', glyph: '❄️', mana: 26, cd: 5.5,  color: '#7fe6ff' },
-  { id: 'chain',  name: '연쇄 번개',  key: 'E',   glyph: '⚡', mana: 30, cd: 4.0,  color: '#c9b3ff' },
-  { id: 'meteor', name: '메테오',     key: 'R',   glyph: '☄️', mana: 60, cd: 14.0, color: '#ff6a3c' },
-  { id: 'blink',  name: '점멸',       key: 'SPC', glyph: '💨', mana: 12, cd: 3.0,  color: '#a0ffe0' }
+  { id: 'fire',   name: '화염구',     key: 'LMB', glyph: '🔥', mana: 6,  cd: 0.40, color: '#ff9a4a' },
+  { id: 'frost',  name: '서리 폭발',  key: 'RMB', glyph: '❄️', mana: 24, cd: 5.5,  color: '#7fe6ff' },
+  { id: 'chain',  name: '연쇄 번개',  key: 'E',   glyph: '⚡', mana: 28, cd: 4.0,  color: '#c9b3ff' },
+  { id: 'meteor', name: '메테오',     key: 'R',   glyph: '☄️', mana: 55, cd: 14.0, color: '#ff6a3c' },
+  { id: 'blink',  name: '점멸',       key: 'SPC', glyph: '💨', mana: 10, cd: 3.0,  color: '#a0ffe0' }
 ];
-
-const CRIT_CHANCE = 0.16;
 
 export class SpellSystem {
   constructor(ctx) {
@@ -36,7 +34,8 @@ export class SpellSystem {
 
   cdFor(id) {
     const s = SPELLS.find(x => x.id === id);
-    return s.cd * this.ctx.player.stats.cdr * (id === 'blink' ? 1 : 1);
+    const st = this.ctx.player.stats;
+    return s.cd * st.cdr * (id === 'blink' ? st.blinkCdr : 1);
   }
 
   ready(id) { return this.cool[id] <= 0; }
@@ -438,5 +437,5 @@ export class SpellSystem {
     for (const id in this.cool) this.cool[id] = 0;
   }
 
-  isCrit() { return Math.random() < CRIT_CHANCE; }
+  isCrit() { return Math.random() < this.ctx.player.stats.crit; }
 }

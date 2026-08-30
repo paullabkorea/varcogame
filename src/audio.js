@@ -224,6 +224,12 @@ export class Audio {
                         this._tone(f, f, 0.9, { type: 'sawtooth', gain: 0.09, delay: i * 0.05 })); break;
       case 'nomana':  this._tone(200, 150, 0.12, { type: 'square', gain: 0.06 }); break;
       case 'pickup':  this._tone(880, 1320, 0.18, { type: 'triangle', gain: 0.12 }); break;
+      // 강타 예고 — 낮은 음이 위로 감기며 "온다"를 알린다
+      case 'windup':  this._tone(110, 300, 0.45, { type: 'sawtooth', gain: 0.13 });
+                      this._noise(0.4, { gain: 0.07, type: 'bandpass', f0: 300, f1: 900, q: 2 }); break;
+      // 연속 처치 10단위 — 짧고 밝은 종
+      case 'combo':   [1046, 1568].forEach((f, i) =>
+                        this._tone(f, f, 0.22, { type: 'triangle', gain: 0.10, delay: i * 0.055 })); break;
     }
   }
 

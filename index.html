@@ -27,7 +27,12 @@
         <div class="bar hp"><i id="hpFill"></i><span id="hpText">100 / 100</span></div>
         <div class="bar mp"><i id="mpFill"></i><span id="mpText">100 / 100</span></div>
         <div class="bar xp"><i id="xpFill"></i></div>
+        <div id="runes"></div>
       </div>
+    </div>
+
+    <div id="combo" class="hidden">
+      <b id="comboNum">0</b><small>연속</small><em id="comboMul">×1.00</em>
     </div>
 
     <div class="hud-topcenter">
@@ -59,6 +64,27 @@
     <div id="cards"></div>
   </div>
 
+  <!-- ===== 일시정지 ===== -->
+  <div id="pause" class="overlay hidden">
+    <h2>숨 고르기</h2>
+    <p class="sub">제단의 시간이 잠시 멈췄다</p>
+    <div class="keys">
+      <div><b>W A S D</b> 이동</div>
+      <div><b>마우스</b> 조준</div>
+      <div><b>좌클릭</b> 화염구</div>
+      <div><b>우클릭</b> 서리 폭발</div>
+      <div><b>E</b> 연쇄 번개</div>
+      <div><b>R</b> 메테오</div>
+      <div><b>Space</b> 점멸</div>
+      <div><b>휠</b> 시야 조절</div>
+    </div>
+    <p class="hint">붉은 고리가 뜨면 <b>강타</b>다 — 고리 밖으로 빠져나가면 빗나간다</p>
+    <div class="btnrow">
+      <button id="resumeBtn">계속 수호</button>
+      <button id="quitBtn" class="ghost">포기</button>
+    </div>
+  </div>
+
   <!-- ===== 타이틀 ===== -->
   <div id="title" class="overlay hidden">
     <div class="brand">
@@ -76,7 +102,8 @@
       <div><b>Space</b> 점멸</div>
       <div><b>휠</b> 시야 조절</div>
     </div>
-    <p class="hint">숫자 <b>1</b>~<b>4</b> 로도 마법을 시전할 수 있습니다 · <b>M</b> 음향 · <b>P</b> 일시정지</p>
+    <p class="hint">숫자 <b>1</b>~<b>4</b> 로도 마법을 시전할 수 있습니다 · <b>M</b> 음향 · <b>P</b>/<b>ESC</b> 일시정지</p>
+    <p class="hint">금빛 고리를 두른 <b>정예</b>는 단단하지만 값지고, 붉은 고리는 <b>강타 예고</b>다 — 밖으로 피해라</p>
     <button id="startBtn">수호 시작</button>
   </div>
 

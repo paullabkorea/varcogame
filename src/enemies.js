@@ -37,7 +37,8 @@ export const TYPES = {
   },
   golem: {
     name: '석상 골렘', hp: 210, speed: 2.0, dmg: 26, radius: 1.5, xp: 14, score: 45,
-    color: 0x8e8aa8, emissive: 0x2b2740, height: 2.6, knock: 0.25
+    color: 0x8e8aa8, emissive: 0x2b2740, height: 2.6, knock: 0.25,
+    reach: 1.8, windup: 0.5
   },
   wraith: {
     name: '저주받은 망령', hp: 66, speed: 3.1, dmg: 13, radius: 0.8, xp: 8, score: 30,
@@ -47,8 +48,18 @@ export const TYPES = {
   boss: {
     name: '심연의 군주', hp: 820, speed: 2.5, dmg: 34, radius: 2.4, xp: 90, score: 500,
     color: 0x1f1030, emissive: 0xff2d55, height: 4.6, knock: 0, boss: true,
-    ranged: true, range: 16, fireRate: 1.5, boltSpeed: 15
+    ranged: true, range: 16, fireRate: 1.5, boltSpeed: 15,
+    reach: 2.2, windup: 0.55
   }
+};
+
+/**
+ * 정예 변이 — 같은 몹을 더 단단하고 아프게, 그리고 훨씬 값지게 만든다.
+ * 웨이브가 길어져도 "같은 몹이 숫자만 늘어난다"는 느낌을 줄이는 장치.
+ */
+export const ELITE = {
+  hp: 2.4, dmg: 1.3, speed: 1.06, scale: 1.26, xp: 2.6, score: 3, knock: 0.55,
+  color: 0xffb43c
 };
 
 /* ------------------------------------------------------------------ */
@@ -347,24 +358,47 @@ const _TMP = new THREE.Vector3();
 
 let UID = 0;
 export class Enemy {
-  constructor(type, level, ctx) {
+  constructor(type, level, ctx, opts = {}) {
     this.id = ++UID;
     this.type = type;
     this.def = TYPES[type];
     this.ctx = ctx;
+    this.elite = !!opts.elite && !this.def.boss;
 
     const built = BUILDERS[type](this.def);
     this.parts = built;
     this.obj = built.group;
     this.obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
-    const scale = 1 + (level - 1) * 0.012;
-    this.maxHp = Math.round(this.def.hp * (1 + (level - 1) * 0.17));
+    const E = this.elite ? ELITE : null;
+    const scale = (1 + (level - 1) * 0.012) * (E ? E.scale : 1);
+    this.maxHp = Math.round(this.def.hp * (1 + (level - 1) * 0.17) * (E ? E.hp : 1));
     this.hp = this.maxHp;
-    this.dmg = this.def.dmg * (1 + (level - 1) * 0.06);
-    this.speed = this.def.speed * (1 + Math.min(0.35, (level - 1) * 0.012));
+    this.dmg = this.def.dmg * (1 + (level - 1) * 0.06) * (E ? E.dmg : 1);
+    this.speed = this.def.speed * (1 + Math.min(0.35, (level - 1) * 0.012)) * (E ? E.speed : 1);
     this.radius = this.def.radius * scale;
+    this.knockMul = this.def.knock * (E ? E.knock : 1);
+    this.xp = Math.round(this.def.xp * (E ? E.xp : 1));
+    this.score = Math.round(this.def.score * (E ? E.score : 1));
+    this.name = (E ? '정예 ' : '') + this.def.name;
     this.obj.scale.setScalar(scale);
+
+    // 정예 표식 — 발밑에 도는 금빛 고리 (라이트를 안 쓰므로 셰이더 재컴파일이 없다)
+    if (this.elite) {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.82, 1, 30),
+        new THREE.MeshBasicMaterial({
+          color: ELITE.color, transparent: true, opacity: 0.85,
+          blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false
+        })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.06 / scale;
+      ring.scale.setScalar((this.def.radius * 1.55) / scale);
+      ring.renderOrder = 4;
+      this.obj.add(ring);
+      this.eliteRing = ring;
+    }
 
     this.pos = this.obj.position;
     this.vel = new THREE.Vector3();
@@ -376,6 +410,7 @@ export class Enemy {
     this.fireCd = rand(0.6, 2.0);
     this.phase = rand(0, TAU);
     this.spawnT = 0.7;          // 소환 연출 시간
+    this.windT = 0;             // 강타 준비 동작(텔레그래프) 잔여 시간
     this.swing = 0;             // 무기 휘두르기 진행도 (1 → 0)
     this.stride = rand(0, TAU); // 걸음 위상
     this.dead = false;
@@ -396,8 +431,8 @@ export class Enemy {
     if (this.dead) return 0;
     this.hp -= dmg;
     this.flash = 0.14;
-    if (from && this.def.knock > 0) {
-      const k = (opts.knock ?? 1) * this.def.knock * 5.5;
+    if (from && this.knockMul > 0) {
+      const k = (opts.knock ?? 1) * this.knockMul * 5.5;
       this.knock.x += (this.pos.x - from.x);
       this.knock.z += (this.pos.z - from.z);
       const l = Math.hypot(this.knock.x, this.knock.z) || 1;
@@ -442,7 +477,8 @@ export class Enemy {
     const d = dist2D(this.pos, player.pos);
     const dirX = (player.pos.x - this.pos.x) / (d || 1);
     const dirZ = (player.pos.z - this.pos.z) / (d || 1);
-    const spd = this.speed * this.slowMul;
+    // 강타를 준비하는 동안에는 발을 묶는다 — 예고 고리에서 걸어 나갈 시간을 준다
+    const spd = this.speed * this.slowMul * (this.windT > 0 ? 0.15 : 1);
 
     let mx = 0, mz = 0;
     if (this.def.ranged) {
@@ -487,14 +523,30 @@ export class Enemy {
     this.obj.rotation.y += df * Math.min(1, dt * 8);
 
     // ---- 공격 ----
+    // 한 방이 큰 몹(골렘·군주)은 곧장 때리지 않고 예고 고리를 띄운 뒤 내려친다.
+    // 피할 기회를 주는 대신 맞으면 아프다 — 읽고 반응하는 싸움이 된다.
     this.atkCd -= dt;
     if (!this.def.ranged || this.def.boss) {
       const reach = this.radius + (this.def.reach ?? 1.3);
-      if (d < reach && this.atkCd <= 0) {
+      if (this.windT > 0) {
+        this.windT -= dt;
+        if (this.windT <= 0) {
+          this.swing = 1;
+          if (d < reach + 0.7) {
+            ctx.meleeHit(this, this.dmg);
+            this.knock.x -= dirX * 3; this.knock.z -= dirZ * 3;
+          } else if (ctx.onWhiff) ctx.onWhiff(this);
+        }
+      } else if (d < reach && this.atkCd <= 0) {
         this.atkCd = this.def.boss ? 1.6 : 1.1;
-        this.swing = 1;
-        ctx.meleeHit(this, this.dmg);
-        this.knock.x -= dirX * 3; this.knock.z -= dirZ * 3;
+        if (this.def.windup) {
+          this.windT = this.def.windup;
+          if (ctx.telegraph) ctx.telegraph(this, reach + 0.7);
+        } else {
+          this.swing = 1;
+          ctx.meleeHit(this, this.dmg);
+          this.knock.x -= dirX * 3; this.knock.z -= dirZ * 3;
+        }
       }
     }
     if (this.def.ranged) {
@@ -518,6 +570,11 @@ export class Enemy {
     const moving = Math.hypot(this.vel.x, this.vel.z);
     const s = Math.sin(t * 6 + this.phase);
     this.swing = Math.max(0, this.swing - dt * 3.4);
+
+    // 강타 준비 → 내려찍기 (팔을 들어 올렸다가 스윙으로 떨어뜨린다)
+    const raise = this.windT > 0
+      ? Math.sin(clamp(1 - this.windT / this.def.windup, 0, 1) * Math.PI * 0.5) : 0;
+    const heavyArm = -raise * 1.9 + this.swing * 1.0;
 
     switch (p.kind) {
       // ---- GLB 슬라임: 통통 튀고, 뜰 때 늘어나고 닿을 때 눌린다 ----
@@ -631,10 +688,12 @@ export class Enemy {
         const w = Math.sin(t * 3.2 + this.phase) * Math.min(1, moving * 0.5);
         p.legs[0].rotation.x = w * 0.5;
         p.legs[1].rotation.x = -w * 0.5;
-        p.arms[0].rotation.x = -w * 0.4;
-        p.arms[1].rotation.x = w * 0.4;
+        p.arms[0].rotation.x = -w * 0.4 + heavyArm;
+        p.arms[1].rotation.x = w * 0.4 + heavyArm;
+        p.body.rotation.x = raise * 0.14 - this.swing * 0.16;
         this.obj.position.y = this.yBase + Math.abs(w) * 0.08;
         p.core.rotation.y += dt * 1.5;
+        p.core.scale.setScalar(1 + raise * 0.5);
         break;
       }
       case 'wraith': {
@@ -645,7 +704,7 @@ export class Enemy {
       }
       case 'boss': {
         this.obj.position.y = this.yBase + Math.sin(t * 1.4) * 0.18;
-        p.arms.forEach((a, i) => { a.rotation.x = Math.sin(t * 2.2 + i * 1.6) * 0.35; });
+        p.arms.forEach((a, i) => { a.rotation.x = Math.sin(t * 2.2 + i * 1.6) * 0.35 + heavyArm; });
         p.core.rotation.y += dt * 2;
         p.core.rotation.x += dt * 1.1;
         if (this.glowH) {
@@ -660,15 +719,28 @@ export class Enemy {
     // GLB 몹은 텍스처가 있어서 평소 emissive 를 0 으로 둬야 색이 안 뜬다.
     const flashK = this.flash / 0.14;
     const glb = !!p.glb;
+    // 강타 준비 중에는 몸 전체가 붉게 달아오른다 (예고 고리와 함께 읽히는 신호)
+    const windK = this.windT > 0 ? 0.35 + raise * 0.9 : 0;
     for (const m of p.mats) {
-      if (this.slowT > 0) {
+      if (windK > 0) {
+        m.emissive.setHex(0xff3a2a);
+        m.emissiveIntensity = (glb ? 0.6 : 1.2) * windK + flashK * 3;
+      } else if (this.slowT > 0) {
         m.emissive.setHex(0x2f7fd0);
         m.emissiveIntensity = (glb ? 0.5 : 1.4) + flashK * 3;
+      } else if (this.elite) {
+        m.emissive.setHex(glb ? 0x6a3c00 : this.def.emissive);
+        m.emissiveIntensity = (glb ? 0.55 : this.def.boss ? 0.9 : 0.9) + flashK * (glb ? 2.6 : 4);
       } else {
         m.emissive.setHex(glb ? 0x000000 : this.def.emissive);
         m.emissiveIntensity = (glb ? 0 : this.def.boss ? 0.9 : 0.6) + flashK * (glb ? 2.6 : 4);
       }
       if (flashK > 0) m.emissive.lerp(_WHITE, flashK * 0.8);
+    }
+
+    if (this.eliteRing) {
+      this.eliteRing.rotation.z += dt * 1.4;
+      this.eliteRing.material.opacity = 0.55 + Math.sin(t * 4 + this.phase) * 0.3;
     }
   }
 
@@ -687,6 +759,13 @@ export class Enemy {
   dispose(scene) {
     scene.remove(this.obj);
     if (this.glowH) { this.glowH.release(); this.glowH = null; }
+    // 정예 고리는 이 몹만의 지오메트리다 — 공유 캐시(GLB) 경로를 타지 않게 먼저 버린다.
+    if (this.eliteRing) {
+      this.eliteRing.removeFromParent();
+      this.eliteRing.geometry.dispose();
+      this.eliteRing.material.dispose();
+      this.eliteRing = null;
+    }
     // GLB 몹은 지오메트리·텍스처를 캐시에서 공유하므로 재질 복제본만 버린다.
     // 다만 스킨 메시는 몹마다 자기 Skeleton(= 본 텍스처)을 갖고 있어서 따로 버려야 샌다.
     const shared = !!this.parts.glb;
@@ -734,13 +813,37 @@ export class Grid {
 /* ------------------------------------------------------------------ */
 /**
  * 웨이브별 등장 순서 — 1:슬라임 2:해골 3:칼 해골 4:지팡이 해골 5+:혼합.
- * 프리미티브 몹 golem / wraith 는 지금 정규 웨이브에서 빠져 있다.
- * 다시 섞고 싶으면 이 배열과 아래 COST 에 추가하면 된다 (imp 는 보스 소환으로 계속 나온다).
+ * 5 웨이브부터는 UNLOCK 순서대로 새 몹이 한 종류씩 풀에 합류한다.
  */
 export const INTRO = ['slime', 'skeleton', 'skelSword', 'skelStaff'];
 
+/**
+ * 해금 일정 — 혼합 구간이 지루해지지 않게 몇 웨이브마다 새 몹을 한 종류씩 푼다.
+ * (imp 는 보스 소환으로도 계속 나온다)
+ */
+export const UNLOCK = [
+  { wave: 6, type: 'imp' },
+  { wave: 8, type: 'wraith' },
+  { wave: 11, type: 'golem' }
+];
+
 /** 웨이브 예산에서 몹 한 마리가 먹는 비용 (셀수록 비싸다) */
-const COST = { slime: 1, skeleton: 1.3, skelSword: 1.9, skelStaff: 1.8 };
+const COST = {
+  slime: 1, skeleton: 1.3, skelSword: 1.9, skelStaff: 1.8,
+  imp: 1.2, wraith: 2.0, golem: 3.4
+};
+
+/** 이 웨이브에 처음 합류하는 몹 (배너로 알려 준다) */
+export function newTypeAt(w) {
+  if (w >= 1 && w <= INTRO.length) return INTRO[w - 1];
+  const u = UNLOCK.find(x => x.wave === w);
+  return u ? u.type : null;
+}
+
+/** 이 웨이브에서 몹이 정예로 태어날 확률 */
+function eliteChance(w) {
+  return w < 4 ? 0 : Math.min(0.3, 0.06 + (w - 4) * 0.022);
+}
 
 export class WaveManager {
   constructor(ctx) {
@@ -766,15 +869,20 @@ export class WaveManager {
     const list = [];
     let left = 5 + w * 2.6;
 
-    if (w % 5 === 0) list.push('boss');
+    if (w % 5 === 0) list.push({ type: 'boss', elite: false });
 
-    const pool = w <= INTRO.length ? [INTRO[w - 1]] : INTRO;
+    const pool = w <= INTRO.length
+      ? [INTRO[w - 1]]
+      : INTRO.concat(UNLOCK.filter(u => w >= u.wave).map(u => u.type));
+
+    const ec = eliteChance(w);
     let guard = 0;
     while (left > 0.8 && guard++ < 200) {
       const t = pool[randInt(0, pool.length - 1)];
       if (COST[t] > left + 0.4) continue;
-      list.push(t);
-      left -= COST[t];
+      const elite = Math.random() < ec;
+      list.push({ type: t, elite });
+      left -= COST[t] * (elite ? 1.8 : 1);
     }
     return list;
   }
@@ -799,9 +907,9 @@ export class WaveManager {
     if (this.queue.length) {
       this.spawnTimer -= dt;
       if (this.spawnTimer <= 0) {
-        const t = this.queue.shift();
-        this.spawnTimer = t === 'boss' ? 1.2 : rand(0.18, 0.45);
-        this.ctx.spawn(t, this.wave);
+        const e = this.queue.shift();
+        this.spawnTimer = e.type === 'boss' ? 1.2 : rand(0.18, 0.45) * (e.elite ? 2 : 1);
+        this.ctx.spawn(e.type, this.wave, e.elite);
         this.spawnedThisWave++;
       }
     } else if (enemies.length === 0) {

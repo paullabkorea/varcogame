@@ -32,7 +32,7 @@ export class Player {
     this.leanS = 0;           // 좌우 (스트레이프)
 
     this.maxHp = 100; this.hp = 100;
-    this.maxMp = 100; this.mp = 100; this.mpRegen = 9;
+    this.maxMp = 100; this.mp = 100; this.mpRegen = 11;
     this.level = 1; this.xp = 0; this.xpNext = 12;
     this.alive = true;
 
@@ -50,7 +50,8 @@ export class Player {
     // 성장 스탯
     this.stats = {
       dmg: 1, cdr: 1, moveSpd: 1, lifesteal: 0,
-      fireExtra: 0, novaRadius: 1, chainExtra: 0, dashCd: 3, pierce: 0
+      fireExtra: 0, novaRadius: 1, chainExtra: 0, blinkCdr: 1, pierce: 0,
+      crit: 0.16, manaOnKill: 0
     };
 
     this._axisCache = new Map();
@@ -598,6 +599,8 @@ export class Player {
 
   heal(v) { this.hp = Math.min(this.maxHp, this.hp + v); }
 
+  restoreMana(v) { this.mp = Math.min(this.maxMp, this.mp + v); }
+
   addXp(v) {
     this.xp += v;
     let leveled = 0;
@@ -618,13 +621,14 @@ export class Player {
     this.leanF = 0; this.leanS = 0;
     this.hp = this.maxHp = 100;
     this.mp = this.maxMp = 100;
-    this.mpRegen = 9;
+    this.mpRegen = 11;
     this.level = 1; this.xp = 0; this.xpNext = 12;
     this.alive = true;
     this.invuln = 0;
     this.stats = {
       dmg: 1, cdr: 1, moveSpd: 1, lifesteal: 0,
-      fireExtra: 0, novaRadius: 1, chainExtra: 0, dashCd: 3, pierce: 0
+      fireExtra: 0, novaRadius: 1, chainExtra: 0, blinkCdr: 1, pierce: 0,
+      crit: 0.16, manaOnKill: 0
     };
   }
 }
