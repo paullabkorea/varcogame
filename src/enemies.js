@@ -247,15 +247,9 @@ function buildGLB(def) {
     if (handBone) {
       // 손 본에 매단다. 본은 모델 스케일을 물려받으므로 무기 크기를 되돌려 준다.
       weapon.scale.setScalar(1 / rig.handScale);
-      // 손 본의 로컬 축이 제각각이라, 원하는 "모델 공간 각도"를 본 로컬로 변환해서 넣는다.
-      const restQ = new THREE.Quaternion();
-      handBone.getWorldQuaternion(restQ);
-      const rootQ = new THREE.Quaternion();
-      g.getWorldQuaternion(rootQ);
-      restQ.premultiply(rootQ.invert()).invert();
-      weapon.quaternion.copy(restQ).multiply(
-        new THREE.Quaternion().setFromEuler(WEAPON_REST[def.weapon] ?? new THREE.Euler())
-      );
+      const grip = WEAPON_GRIP[def.weapon] ?? WEAPON_GRIP.sword;
+      weapon.position.fromArray(grip.pos);
+      weapon.quaternion.setFromEuler(new THREE.Euler(...grip.rot));
       handBone.add(weapon);
     } else {
       tilt.add(weapon);                          // 리그가 없으면 그냥 몸에 붙인다
@@ -268,10 +262,37 @@ function buildGLB(def) {
   };
 }
 
-/** 손에 쥐었을 때의 각도 — 모델 공간 기준. 날이 위, 몸 바깥(-x)으로 살짝 눕는다 */
-const WEAPON_REST = {
-  sword: new THREE.Euler(-0.14, 0, 0.34),
-  staff: new THREE.Euler(-0.04, 0, 0.12),
+/**
+ * 무기를 쥐는 방식 — **손 본 로컬 좌표계** 기준.
+ *
+ * 이 모델의 손에는 손가락 본이 없다. 손뼈가 T포즈처럼 쫙 펴진 채 굳어 있어서
+ * 무기를 어떻게 놔도 "쥔" 모양은 만들 수 없다. 대신 두 가지를 지킨다.
+ *
+ *  1. **자루가 손바닥을 관통한다.** 손 본의 원점은 손목이라 무기를 그냥 매달면
+ *     자루가 손목 옆 허공에 뜬다. +y(= 손가락이 뻗은 방향)로 0.055 밀어 넣으면
+ *     자루가 손바닥 한가운데를 지나고, 손가락뼈가 자루에 겹쳐 붙는다.
+ *  2. **자루축 = 손가락축.** 회전을 항등으로 두면 무기의 +Y(날/지팡이 끝)가
+ *     손가락이 가리키는 방향과 정확히 일치한다. 손끝으로 칼날이 뻗어 나가고
+ *     손잡이 끝(pommel)이 손목 뒤로 조금 나오는, 어느 각도에서 봐도 어긋나지 않는 배치.
+ *
+ * 그래서 "무기가 어디를 향하는가" 는 여기가 아니라 손목/팔 자세(CARRY)가 정한다.
+ */
+const WEAPON_GRIP = {
+  sword: { pos: [0, 0.055, -0.012], rot: [0, 0, 0] },
+  staff: { pos: [0, 0.055, -0.012], rot: [0, 0, 0] },
+};
+
+/**
+ * 무기를 든 팔의 기본 자세 (모델 공간 라디안, poseBone 의 x→y→z 순서).
+ * 팔을 늘어뜨린 채로 두면 무기가 다리·로브를 뚫고 지나가서, 팔꿈치를 접어
+ * 무기를 몸 앞·바깥으로 들어 올린다. 걷기 스윙은 이 자세 위에 약하게만 얹는다.
+ *
+ *  - sword: 날을 위로 세운 준비 자세 (내려치기로 바로 이어진다)
+ *  - staff: 수정이 머리 위로 오도록 거의 수직으로 세워 든다
+ */
+const CARRY = {
+  sword: { arm: [-0.20, -0.25, -0.35], fore: [-1.20, 0, 0], hand: [-0.35, 0, -0.35] },
+  staff: { arm: [-0.25, -0.30, -0.35], fore: [-1.20, 0, 0], hand: [-0.45, 0, -0.45] },
 };
 
 /* ------------------------------------------------------------------ */
@@ -540,25 +561,59 @@ export class Enemy {
         poseBone(p, 'LeftArm', [['x', sw * armA + breathe]]);
         poseBone(p, 'LeftForeArm', [['x', -Math.max(0, sw) * 0.45 * run]]);
 
+        // 오른팔: 맨손이면 자유롭게 흔들고, 무기를 들었으면 CARRY 자세를 기준으로 삼는다.
+        // 무기를 든 팔은 걸을 때도 크게 흔들리면 안 된다 (칼이 다리를 뚫는다).
+        const c = CARRY[this.def.weapon];
         const u = 1 - this.swing;                // 스윙 진행도 0 → 1 (쉴 때 1)
-        if (this.swing <= 0) {
-          poseBone(p, 'RightArm', [['x', -sw * armA - breathe]]);
-          poseBone(p, 'RightForeArm', [['x', -Math.max(0, -sw) * 0.45 * run]]);
+        if (!c) {
+          // 맨손 해골 — 예전 그대로
+          if (this.swing <= 0) {
+            poseBone(p, 'RightArm', [['x', -sw * armA - breathe]]);
+            poseBone(p, 'RightForeArm', [['x', -Math.max(0, -sw) * 0.45 * run]]);
+            p.tilt.rotation.y = 0;
+          } else {
+            const a = u < 0.30 ? (u / 0.30) * 2.1
+              : u < 0.55 ? 2.1 - (u - 0.30) / 0.25 * 2.7
+                : -0.6 * (1 - (u - 0.55) / 0.45);
+            poseBone(p, 'RightArm', [['x', a]]);
+            poseBone(p, 'RightForeArm', [['x', -Math.max(0, a) * 0.55]]);
+            p.tilt.rotation.y = a * 0.13;
+          }
+        } else if (this.swing <= 0) {
+          // 들고 걷기 — CARRY 위에 약한 반동만 얹는다
+          const bob = -sw * armA * 0.30 - breathe;
+          poseBone(p, 'RightArm', [['x', c.arm[0] + bob], ['y', c.arm[1]], ['z', c.arm[2]]]);
+          poseBone(p, 'RightForeArm', [['x', c.fore[0] - Math.max(0, -sw) * 0.14 * run]]);
+          poseBone(p, 'RightHand', [['x', c.hand[0]], ['y', c.hand[1]], ['z', c.hand[2]]]);
           p.tilt.rotation.y = 0;
         } else if (this.def.ranged) {
-          // 시전: 지팡이를 앞으로 겨눴다 되돌린다
+          // 시전: 지팡이를 앞으로 겨눴다 되돌린다. 팔꿈치를 펴서 수정을 앞으로 내민다
           const a = Math.sin(u * Math.PI);
-          poseBone(p, 'RightArm', [['x', -a * 1.15]]);
-          poseBone(p, 'RightForeArm', [['x', -a * 0.75]]);
-          p.tilt.rotation.y = 0;
+          poseBone(p, 'RightArm', [
+            ['x', c.arm[0] - a * 0.85], ['y', c.arm[1] * (1 - a * 0.7)], ['z', c.arm[2] * (1 - a * 0.5)]]);
+          poseBone(p, 'RightForeArm', [['x', c.fore[0] * (1 - a * 0.75)]]);
+          poseBone(p, 'RightHand', [
+            ['x', c.hand[0] * (1 - a * 0.4) - a * 0.35], ['y', c.hand[1]], ['z', c.hand[2] * (1 - a)]]);
+          p.tilt.rotation.y = -a * 0.10;
         } else {
-          // 내려치기. +x 가 뒤라서 머리 위로 젖혔다가(+) 앞으로 내리친다(-)
-          const a = u < 0.30 ? (u / 0.30) * 2.1                  // 0 → 뒤로 크게 젖힘
-            : u < 0.55 ? 2.1 - (u - 0.30) / 0.25 * 2.7           // 젖힘 → 앞으로 내려침
-              : -0.6 * (1 - (u - 0.55) / 0.45);                  // 복귀
-          poseBone(p, 'RightArm', [['x', a]]);
-          poseBone(p, 'RightForeArm', [['x', -Math.max(0, a) * 0.55]]);   // 젖힐 때만 접힘
-          p.tilt.rotation.y = a * 0.13;          // 몸통도 같이 돌아간다
+          /*
+           * 사선 베기. s = -1 이면 칼을 머리 옆·뒤로 당긴 자세, +1 이면 몸 앞을
+           * 가로질러 베어 내린 자세다.
+           *
+           * 위에서 아래로 내려찍는 대신 가로 궤적을 쓰는 이유: 게임 카메라가 45°
+           * 부감이라 수직 궤적은 원근에 눌려 거의 안 보인다. 어깨를 모델 Y축으로
+           * 돌려 팔을 몸 앞으로 훑으면 위에서도 궤적이 시원하게 읽힌다.
+           */
+          const s = u < 0.30 ? -(u / 0.30)                       // 0 → 뒤로 당김
+            : u < 0.52 ? -1 + (u - 0.30) / 0.22 * 2              // 당김 → 베어 넘김
+              : 1 - (u - 0.52) / 0.48;                           // 복귀
+          const fwd = Math.max(0, s);            // 앞으로 베는 구간에서만 손목을 눕힌다
+          poseBone(p, 'RightArm', [
+            ['x', c.arm[0] - 0.45 * s], ['y', c.arm[1] + 1.15 * s], ['z', c.arm[2] + 0.25 * s]]);
+          poseBone(p, 'RightForeArm', [['x', c.fore[0] * (1 - 0.5 * s)]]);   // 벨 때 팔을 편다
+          poseBone(p, 'RightHand', [
+            ['x', c.hand[0] + 0.85 * fwd], ['y', c.hand[1]], ['z', c.hand[2] * (1 - 0.6 * fwd)]]);
+          p.tilt.rotation.y = 0.22 * s;          // 몸통도 같이 돌아간다
         }
 
         // 몸 전체 반동
