@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>마법사의 시련 — Wizard's Trial</title>
+<link rel="stylesheet" href="./css/style.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <!-- ===== HUD ===== -->
+  <div id="hud" class="hidden">
+    <div class="hud-topleft">
+      <div class="portrait"><span id="lvNum">1</span><small>LV</small></div>
+      <div class="bars">
+        <div class="bar hp"><i id="hpFill"></i><span id="hpText">100 / 100</span></div>
+        <div class="bar mp"><i id="mpFill"></i><span id="mpText">100 / 100</span></div>
+        <div class="bar xp"><i id="xpFill"></i></div>
+      </div>
+    </div>
+
+    <div class="hud-topcenter">
+      <div id="waveLabel">WAVE 1</div>
+      <div id="waveSub">몹 0 / 0</div>
+      <div id="bossBar" class="hidden">
+        <span id="bossName">심연의 마왕</span>
+        <div class="bb"><i id="bossFill"></i></div>
+      </div>
+    </div>
+
+    <div class="hud-topright">
+      <div class="stat"><b id="killNum">0</b><small>처치</small></div>
+      <div class="stat"><b id="scoreNum">0</b><small>점수</small></div>
+      <div class="stat"><b id="timeNum">0:00</b><small>생존</small></div>
+    </div>
+
+    <div class="hud-spells" id="spellBar"></div>
+
+    <div id="banner"></div>
+    <div id="dmgLayer"></div>
+    <div id="hurtVignette"></div>
+  </div>
+
+  <!-- ===== 레벨업 선택 ===== -->
+  <div id="levelup" class="overlay hidden">
+    <h2>레벨 업!</h2>
+    <p class="sub">마력이 흘러넘친다. 하나를 선택하라.</p>
+    <div id="cards"></div>
+  </div>
+
+  <!-- ===== 타이틀 ===== -->
+  <div id="title" class="overlay hidden">
+    <h1>마법사의 시련</h1>
+    <p class="sub">끝없이 밀려오는 몹으로부터 룬의 제단을 지켜라</p>
+    <div class="keys">
+      <div><b>W A S D</b> 이동</div>
+      <div><b>마우스</b> 조준</div>
+      <div><b>좌클릭</b> 화염구</div>
+      <div><b>우클릭</b> 서리 폭발</div>
+      <div><b>E</b> 연쇄 번개</div>
+      <div><b>R</b> 메테오</div>
+      <div><b>Space</b> 점멸</div>
+      <div><b>휠</b> 줌 · <b>M</b> 음소거</div>
+    </div>
+    <button id="startBtn">시련 시작</button>
+  </div>
+
+  <!-- ===== 게임 오버 ===== -->
+  <div id="gameover" class="overlay hidden">
+    <h1>쓰러졌다…</h1>
+    <div id="goStats"></div>
+    <button id="retryBtn">다시 도전</button>
+  </div>
+
+  <!-- ===== 로딩 ===== -->
+  <div id="loading" class="overlay">
+    <h1>마법사의 시련</h1>
+    <div class="loadbar"><i id="loadFill"></i></div>
+    <p id="loadText">마법서를 펼치는 중…</p>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
