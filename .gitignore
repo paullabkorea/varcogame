@@ -3,6 +3,10 @@
 # 다시 구우려면 tools/optimize-glb.mjs 를 쓴다.
 assets/models/source/
 
+# 배경음악 원본 wav (31MB). 게임이 읽는 건 인코딩본 assets/sound/bgm.mp3 (2.3MB) 뿐이고,
+# 다시 구우려면 tools/build-bgm.mjs 를 쓴다.
+assets/sound/source/music/
+
 # 최적화 스크립트 의존성
 node_modules/
 package-lock.json

@@ -65,14 +65,15 @@ src/enemies.js          적 종류, AI, 절차 애니메이션, 웨이브 매니
 src/spells.js           마법 5종, 투사체, 폭발, 적 탄환
 src/effects.js          파티클/링/번개/데미지 숫자/카메라 흔들림
 src/world.js            아레나, 룬 바닥 텍스처(캔버스 생성), 조명
-src/audio.js            효과음·배경음 (합성 + 화염구/서리 폭발만 wav 샘플)
+src/audio.js            효과음·배경음 (합성 + 화염구/서리 폭발 wav + 배경음악 mp3)
 src/ui.js               HUD 갱신, 레벨업 카드
 assets/models/          게임이 읽는 최적화본 (*.opt.glb)
 assets/models/source/   원본 GLB (재작업용, 지워도 게임은 돌아감)
-assets/sound/           게임이 읽는 효과음 (fireball.wav, frost.wav)
-assets/sound/source/    원본 wav (다듬기 전, 지워도 게임은 돌아감)
+assets/sound/           게임이 읽는 소리 (fireball.wav, frost.wav, bgm.mp3)
+assets/sound/source/    효과음 원본 wav (다듬기 전, 지워도 게임은 돌아감)
 tools/optimize-glb.mjs  source/ → *.opt.glb 굽는 스크립트
-tools/build-sfx.mjs     sound/source/ → 게임용 wav 다듬는 스크립트
+tools/build-sfx.mjs     sound/source/ → 게임용 효과음 wav 다듬는 스크립트
+tools/build-bgm.mjs     sound/source/music/ → 배경음악 mp3 인코딩 (31MB → 2.3MB)
 vendor/three/           three.js r160 + 애드온 (GLTFLoader, SkeletonUtils, 포스트프로세싱)
 docs/                   3D 최적화 용어집, 사운드 정리
 ```
