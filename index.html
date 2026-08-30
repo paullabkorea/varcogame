@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>마법사의 시련 — Wizard's Trial</title>
+<title>룬가드 — RUNEGUARD</title>
+<meta name="description" content="무너진 제단의 마지막 수호자가 되어 밀려오는 어둠을 막아내는 Three.js 3D 마법 액션." />
 <link rel="stylesheet" href="./css/style.css" />
 <script type="importmap">
 {
@@ -31,9 +32,9 @@
 
     <div class="hud-topcenter">
       <div id="waveLabel">WAVE 1</div>
-      <div id="waveSub">몹 0 / 0</div>
+      <div id="waveSub">남은 적 0</div>
       <div id="bossBar" class="hidden">
-        <span id="bossName">심연의 마왕</span>
+        <span id="bossName">심연의 군주</span>
         <div class="bb"><i id="bossFill"></i></div>
       </div>
     </div>
@@ -53,15 +54,18 @@
 
   <!-- ===== 레벨업 선택 ===== -->
   <div id="levelup" class="overlay hidden">
-    <h2>레벨 업!</h2>
-    <p class="sub">마력이 흘러넘친다. 하나를 선택하라.</p>
+    <h2>룬 각인</h2>
+    <p class="sub">새로운 룬이 깨어났다 — 하나를 몸에 새겨라</p>
     <div id="cards"></div>
   </div>
 
   <!-- ===== 타이틀 ===== -->
   <div id="title" class="overlay hidden">
-    <h1>마법사의 시련</h1>
-    <p class="sub">끝없이 밀려오는 몹으로부터 룬의 제단을 지켜라</p>
+    <div class="brand">
+      <h1>RUNEGUARD</h1>
+      <p class="kr">룬 가 드</p>
+    </div>
+    <p class="sub">무너진 제단, 마지막 수호자 — 룬의 불이 꺼지기 전까지 버텨라</p>
     <div class="keys">
       <div><b>W A S D</b> 이동</div>
       <div><b>마우스</b> 조준</div>
@@ -70,23 +74,28 @@
       <div><b>E</b> 연쇄 번개</div>
       <div><b>R</b> 메테오</div>
       <div><b>Space</b> 점멸</div>
-      <div><b>휠</b> 줌 · <b>M</b> 음소거</div>
+      <div><b>휠</b> 시야 조절</div>
     </div>
-    <button id="startBtn">시련 시작</button>
+    <p class="hint">숫자 <b>1</b>~<b>4</b> 로도 마법을 시전할 수 있습니다 · <b>M</b> 음향 · <b>P</b> 일시정지</p>
+    <button id="startBtn">수호 시작</button>
   </div>
 
   <!-- ===== 게임 오버 ===== -->
   <div id="gameover" class="overlay hidden">
-    <h1>쓰러졌다…</h1>
+    <h1>룬이 꺼졌다</h1>
+    <p class="sub">제단은 어둠에 삼켜졌다. 그러나 기록은 남는다.</p>
     <div id="goStats"></div>
-    <button id="retryBtn">다시 도전</button>
+    <button id="retryBtn">다시 수호하기</button>
   </div>
 
   <!-- ===== 로딩 ===== -->
   <div id="loading" class="overlay">
-    <h1>마법사의 시련</h1>
+    <div class="brand">
+      <h1>RUNEGUARD</h1>
+      <p class="kr">룬 가 드</p>
+    </div>
     <div class="loadbar"><i id="loadFill"></i></div>
-    <p id="loadText">마법서를 펼치는 중…</p>
+    <p id="loadText">제단의 룬을 깨우는 중…</p>
   </div>
 </div>
 

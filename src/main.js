@@ -109,11 +109,11 @@ class Game {
 
   async boot() {
     // 몹 GLB 4종을 먼저 굽는다 (지오메트리/텍스처를 몹 전체가 공유)
-    await loadModels(k => this.ui.setProgress(k * 0.45, '몹을 불러오는 중… ' + Math.round(k * 100) + '%'));
+    await loadModels(k => this.ui.setProgress(k * 0.45, '어둠의 무리를 불러내는 중… ' + Math.round(k * 100) + '%'));
 
     this.player = new Player(this.scene);
-    await this.player.load(k => this.ui.setProgress(0.45 + k * 0.53, '마법사를 소환하는 중… ' + Math.round(k * 100) + '%'));
-    this.ui.setProgress(1, '준비 완료');
+    await this.player.load(k => this.ui.setProgress(0.45 + k * 0.53, '수호자를 깨우는 중… ' + Math.round(k * 100) + '%'));
+    this.ui.setProgress(1, '각인 완료');
 
     this.spells = new SpellSystem(this._spellCtx());
     this.waves = new WaveManager(this._waveCtx());
@@ -246,12 +246,12 @@ class Game {
     return {
       spawn: (type, wave) => this.spawnEnemy(type, wave),
       onWaveStart: (w, n) => {
-        const intro = w <= INTRO.length ? TYPES[INTRO[w - 1]].name : '혼합 무리';
+        const intro = w <= INTRO.length ? TYPES[INTRO[w - 1]].name : '혼성 무리';
         this.ui.banner('WAVE ' + w + ' — ' + intro);
         this.audio.play('wave');
       },
       onWaveClear: (w) => {
-        this.ui.banner('웨이브 ' + w + ' 격퇴!');
+        this.ui.banner('제 ' + w + ' 파 격퇴');
         this.player.heal(8);
       }
     };
@@ -301,7 +301,7 @@ class Game {
     this.waves.reset();
     this.ui.flashHurt(0);
     this.state = 'play';
-    this.ui.banner('시련 개시');
+    this.ui.banner('제단 수호 개시');
   }
 
   gameOver() {
@@ -331,14 +331,14 @@ class Game {
       speed: [1, 6], size: [0.3, 0], life: [0.35, 0.8], gravity: -3, drag: 2, spread: 0.6
     });
     if (type === 'boss') {
-      this.ui.banner('심연의 마왕 강림');
+      this.ui.banner('심연의 군주, 강림');
       this.shake.add(0.7);
     }
     return e;
   }
 
   bossSummon(boss) {
-    this.ui.banner('마왕이 하수인을 부른다');
+    this.ui.banner('군주가 하수인을 불러낸다');
     for (let i = 0; i < 4; i++) {
       const e = new Enemy('imp', this.waves.wave, this._enemyCtx());
       const a = rand(0, TAU);
@@ -379,7 +379,7 @@ class Game {
     this.audio.play('death');
     if (e.def.boss) {
       this.shake.add(0.8);
-      this.ui.banner('마왕 격파!');
+      this.ui.banner('심연의 군주 격파');
       for (let i = 0; i < 6; i++) this.dropOrb(e.pos, 'hp', 25);
     }
 
@@ -485,10 +485,10 @@ class Game {
     }
     if (Input.justKey('KeyM')) {
       const m = this.audio.toggleMute();
-      this.ui.banner(m ? '음소거' : '소리 켜짐');
+      this.ui.banner(m ? '음향 차단' : '음향 복구');
     }
     if (Input.justKey('KeyP') || Input.justKey('Escape')) {
-      if (this.state === 'play') { this.paused = !this.paused; this.ui.banner(this.paused ? '일시정지' : ''); }
+      if (this.state === 'play') { this.paused = !this.paused; this.ui.banner(this.paused ? '일시정지' : '수호 재개'); }
     }
     if (Input.wheel) this.zoom = clamp(this.zoom + Input.wheel * 0.12, 0.62, 1.6);
 
@@ -608,5 +608,5 @@ window.game = game;
 window.Input = Input;   // 디버깅용
 game.boot().catch(err => {
   console.error(err);
-  document.getElementById('loadText').textContent = '로드 실패: ' + err.message;
+  document.getElementById('loadText').textContent = '불러오기에 실패했습니다 — ' + err.message;
 });

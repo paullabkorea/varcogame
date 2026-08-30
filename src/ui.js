@@ -1,18 +1,18 @@
 import { SPELLS } from './spells.js';
 import { pick } from './utils.js';
 
-/** 레벨업 시 제시되는 성장 옵션 */
+/** 레벨업 시 3장 중 1장을 고르는 성장 룬 */
 export const UPGRADES = [
   { ic: '🔥', name: '작열하는 손', desc: '모든 마법 피해 +18%', apply: p => p.stats.dmg *= 1.18 },
   { ic: '⏱️', name: '시간 가속', desc: '모든 재사용 대기시간 -18%', apply: p => p.stats.cdr *= 0.82 },
   { ic: '💠', name: '마나의 샘', desc: '최대 마나 +30, 재생 +4/초', apply: p => { p.maxMp += 30; p.mp += 30; p.mpRegen += 4; } },
   { ic: '❤️', name: '강인한 육신', desc: '최대 체력 +30, 즉시 회복', apply: p => { p.maxHp += 30; p.hp = p.maxHp; } },
   { ic: '👟', name: '질풍의 신발', desc: '이동 속도 +16%', apply: p => p.stats.moveSpd *= 1.16 },
-  { ic: '🔱', name: '삼중 화염구', desc: '화염구가 1발 더 발사됨', apply: p => p.stats.fireExtra += 1 },
+  { ic: '🔱', name: '삼중 화염구', desc: '화염구 투사체 +1', apply: p => p.stats.fireExtra += 1 },
   { ic: '❄️', name: '혹한의 파동', desc: '서리 폭발 반경 +35%', apply: p => p.stats.novaRadius *= 1.35 },
   { ic: '⚡', name: '폭풍의 사슬', desc: '연쇄 번개 대상 +2', apply: p => p.stats.chainExtra += 2 },
-  { ic: '🩸', name: '피의 계약', desc: '준 피해의 4%만큼 체력 흡수', apply: p => p.stats.lifesteal += 0.04 },
-  { ic: '💥', name: '관통 탄', desc: '화염구가 폭발 후에도 관통', apply: p => p.stats.pierce += 1 },
+  { ic: '🩸', name: '피의 계약', desc: '가한 피해의 4%를 체력으로 흡수', apply: p => p.stats.lifesteal += 0.04 },
+  { ic: '💥', name: '관통 탄', desc: '화염구가 적 1명을 더 관통', apply: p => p.stats.pierce += 1 },
   { ic: '🌀', name: '공간 도약', desc: '점멸 대기시간 -30%', apply: p => p.stats.dashCd *= 0.7 }
 ];
 
@@ -104,7 +104,7 @@ export class UI {
     if (wm.state === 'break') {
       this.el.waveSub.textContent = '다음 웨이브까지 ' + Math.ceil(wm.breakTimer) + '초';
     } else {
-      this.el.waveSub.textContent = '남은 몹 ' + (game.enemies.length + wm.queue.length);
+      this.el.waveSub.textContent = '남은 적 ' + (game.enemies.length + wm.queue.length);
     }
 
     // 보스 체력 바
@@ -150,10 +150,9 @@ export class UI {
   showGameOver(game) {
     const t = Math.floor(game.elapsed);
     this.el.goStats.innerHTML =
-      '도달 웨이브 <b>' + Math.max(1, game.waves.wave) + '</b><br>' +
-      '처치한 몹 <b>' + game.kills + '</b> · 최종 레벨 <b>' + game.player.level + '</b><br>' +
-      '생존 시간 <b>' + Math.floor(t / 60) + '분 ' + (t % 60) + '초</b><br>' +
-      '점수 <b>' + game.score + '</b>';
+      '도달 웨이브 <b>' + Math.max(1, game.waves.wave) + '</b> · 최종 레벨 <b>' + game.player.level + '</b><br>' +
+      '처치 <b>' + game.kills + '</b> · 생존 <b>' + Math.floor(t / 60) + '분 ' + (t % 60) + '초</b><br>' +
+      '최종 점수 <b>' + game.score + '</b>';
     this.show('gameover');
   }
 }

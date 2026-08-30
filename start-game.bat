@@ -1,11 +1,16 @@
 @echo off
 chcp 65001 >nul
-title 마법사의 시련 - 로컬 서버
+title RUNEGUARD - 로컬 서버
 cd /d "%~dp0"
 
 echo.
-echo   [마법사의 시련] 로컬 서버를 시작합니다...
-echo   (브라우저 보안 정책 때문에 index.html 을 그냥 더블클릭하면 모델이 로드되지 않습니다)
+echo   ==========================================
+echo      R U N E G U A R D  /  룬가드
+echo      무너진 제단, 마지막 수호자
+echo   ==========================================
+echo.
+echo   로컬 서버를 시작합니다. 잠시 후 브라우저가 열립니다.
+echo   (브라우저 보안 정책상 index.html 을 그냥 더블클릭하면 모델이 로드되지 않습니다)
 echo.
 
 where python >nul 2>nul
@@ -22,5 +27,5 @@ if %errorlevel%==0 (
   goto :eof
 )
 
-echo   Python 또는 Node.js 가 필요합니다. 설치 후 다시 실행해 주세요.
+echo   실행에는 Python 또는 Node.js 가 필요합니다. 설치 후 다시 실행해 주세요.
 pause

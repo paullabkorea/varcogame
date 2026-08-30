@@ -97,6 +97,16 @@ canvas#scene{position:absolute;inset:0;width:100%;height:100%;display:block}
   filter:drop-shadow(0 0 26px rgba(140,100,255,.65))}
 .overlay h2{font-size:36px;letter-spacing:6px}
 .overlay .sub{color:var(--dim);letter-spacing:2px}
+
+/* 타이틀 로고 락업 */
+.brand{display:flex;flex-direction:column;align-items:center;gap:6px}
+.brand h1{font-size:64px;letter-spacing:16px;text-indent:16px}
+.brand .kr{
+  font-size:14px;font-weight:700;letter-spacing:14px;text-indent:14px;
+  color:rgba(196,180,255,.72);text-shadow:0 0 18px rgba(140,100,255,.45)
+}
+.hint{font-size:12px;letter-spacing:1px;color:rgba(233,230,255,.42)}
+.hint b{color:rgba(233,230,255,.75);font-weight:700}
 .keys{display:grid;grid-template-columns:repeat(4,auto);gap:8px 22px;margin-top:6px;color:var(--dim);font-size:13px}
 .keys b{color:var(--ink)}
 button{

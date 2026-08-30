@@ -19,7 +19,7 @@ export const TYPES = {
     glb: 'skeleton'
   },
   skelSword: {
-    name: '칼든 해골', hp: 96, speed: 4.2, dmg: 19, radius: 0.6, xp: 8, score: 30,
+    name: '해골 검사', hp: 96, speed: 4.2, dmg: 19, radius: 0.6, xp: 8, score: 30,
     color: 0xc9a76a, emissive: 0x6b4a20, height: 1.80, knock: 0.9,
     glb: 'skeleton', weapon: 'sword', reach: 1.9
   },
@@ -45,7 +45,7 @@ export const TYPES = {
     range: 13, fireRate: 2.3, boltSpeed: 13
   },
   boss: {
-    name: '심연의 마왕', hp: 820, speed: 2.5, dmg: 34, radius: 2.4, xp: 90, score: 500,
+    name: '심연의 군주', hp: 820, speed: 2.5, dmg: 34, radius: 2.4, xp: 90, score: 500,
     color: 0x1f1030, emissive: 0xff2d55, height: 4.6, knock: 0, boss: true,
     ranged: true, range: 16, fireRate: 1.5, boltSpeed: 15
   }
