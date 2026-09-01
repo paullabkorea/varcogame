@@ -6,17 +6,20 @@
 룬 제단 하나를 등지고 사방에서 몰려오는 적을 마법으로 밀어내는 **웨이브 생존 + 성장 룬 픽**
 구조로, 라이브러리 없이 브라우저에서 바로 돌아갑니다.
 
+## 제작방법
+
+Claude Desktop + Varco 3D + Varco Sound
+
 ## 실행 방법
 
-**`start-game.bat` 을 더블클릭** 하면 로컬 서버가 뜨고 브라우저가 열립니다.
-(`index.html` 을 그대로 더블클릭하면 브라우저 보안정책(CORS) 때문에 GLB 모델을 못 불러옵니다.)
+아래 링크를 클릭하면 바로 게임을 시작할 수 있습니다.
 
-수동으로 실행하려면:
-
-```bash
-python -m http.server 8765
-# 브라우저에서 http://localhost:8765/index.html
 ```
+https://paullabkorea.github.io/varcogame/
+```
+
+로컬에서 실행시키려면 https://github.com/paullabkorea/varcogame 접속 후 **`Clone or download → Download ZIP`** 을 눌러 압축을 풀고, **`start-game.bat` 을 더블클릭** 하면 로컬 서버가 뜨고 브라우저가 열립니다.
+(`index.html` 을 그대로 더블클릭하면 브라우저 보안정책(CORS) 때문에 GLB 모델을 못 불러옵니다.)
 
 인터넷 연결 없이도 동작합니다 (three.js 를 `vendor/` 에 포함).
 
@@ -97,7 +100,7 @@ assets/sound/           게임이 읽는 소리 (fireball.wav, frost.wav, bgm.mp
 assets/sound/source/    효과음 원본 wav (다듬기 전, 지워도 게임은 돌아감)
 tools/optimize-glb.mjs  source/ → *.opt.glb 굽는 스크립트
 tools/build-sfx.mjs     sound/source/ → 게임용 효과음 wav 다듬는 스크립트
-tools/build-bgm.mjs     sound/source/music/ → 배경음악 mp3 인코딩 (31MB → 2.3MB)
+tools/build-bgm.mjs     sound/source/music/ → 배경음악 mp3 인코딩 (mp4 4.1MB → 3.0MB)
 vendor/three/           three.js r160 + 애드온 (GLTFLoader, SkeletonUtils, 포스트프로세싱)
 docs/                   3D 최적화 용어집, 사운드 정리
 ```
@@ -246,6 +249,8 @@ Action이 **Fake User(방패 아이콘)** 로 보호돼 있는지 확인하세�
 
 ## varco 프롬프트
 
+### 캐릭터
+만들 때 T자 모양으로 아이템을 장착하지 않은 채로 만들지 않으면 걸을 때 무기 모양이 일그러집니다. 그래서 T자 모양으로 만들고, 무기 장착은 런타임에 RightHand 본에 매답니다.
 ```
 3D 보정
 
@@ -255,6 +260,18 @@ Action이 **Fake User(방패 아이콘)** 로 보호돼 있는지 확인하세�
 ```
 
 ```
-1. 스켈레톤 몬스터가 사용할 낡은 칼을 제작해줘.
-2. 스켈레톤 몬스터가 사용할 낡은 마법 지팡이를 제작해줘.
+프롬프트1
+스켈레톤 몬스터가 사용할 낡은 칼을 제작해줘.
+
+프롬프트2
+스켈레톤 몬스터가 사용할 낡은 마법 지팡이를 제작해줘.
+```
+
+### 음악
+```
+효과음1
+파이어볼 발사되는 효과음을 만들고 싶어.
+
+배경음악1
+나는 룬가드라는 마법사의 탑 프로젝트를 하고 있어. stage가 있고 괴물이 계속 나오는 그런 게임이야. 배경음악을 만들어줘.
 ```
