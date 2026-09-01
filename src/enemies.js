@@ -664,12 +664,15 @@ export class Enemy {
           const s = u < 0.30 ? -(u / 0.30)                       // 0 → 뒤로 당김
             : u < 0.52 ? -1 + (u - 0.30) / 0.22 * 2              // 당김 → 베어 넘김
               : 1 - (u - 0.52) / 0.48;                           // 복귀
-          const fwd = Math.max(0, s);            // 앞으로 베는 구간에서만 손목을 눕힌다
+          // 앞으로 베는 구간에서만 손목을 눕힌다. 눕히는 양이 크면(0.85) 벤 뒤
+          // 칼끝이 수평 아래로 떨어져 로브·다리를 뚫고 지나가고, 45° 부감에서는
+          // 칼을 거꾸로 쥔 것처럼 보인다. 궤적은 그대로 두고 손목만 덜 젖힌다.
+          const fwd = Math.max(0, s);
           poseBone(p, 'RightArm', [
             ['x', c.arm[0] - 0.45 * s], ['y', c.arm[1] + 1.15 * s], ['z', c.arm[2] + 0.25 * s]]);
           poseBone(p, 'RightForeArm', [['x', c.fore[0] * (1 - 0.5 * s)]]);   // 벨 때 팔을 편다
           poseBone(p, 'RightHand', [
-            ['x', c.hand[0] + 0.85 * fwd], ['y', c.hand[1]], ['z', c.hand[2] * (1 - 0.6 * fwd)]]);
+            ['x', c.hand[0] + 0.35 * fwd], ['y', c.hand[1]], ['z', c.hand[2] * (1 - 0.6 * fwd)]]);
           p.tilt.rotation.y = 0.22 * s;          // 몸통도 같이 돌아간다
         }
 
